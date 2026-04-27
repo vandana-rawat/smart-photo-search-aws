@@ -9,7 +9,7 @@ import urllib3
 from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
 
-print("VERIFY_CODEPIPELINE_UPDATE_2026")
+print("VERIFY_CODEPIPELINE_UPDATE_latest")
 s3 = boto3.client("s3")
 rekognition = boto3.client("rekognition")
 http = urllib3.PoolManager()
