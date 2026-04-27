@@ -1,0 +1,55 @@
+{
+  "match_all_documents": {
+    "method": "GET",
+    "path": "photos/_search",
+    "body": {
+      "query": {
+        "match_all": {}
+      }
+    }
+  },
+  "search_by_custom_label_dog": {
+    "method": "GET",
+    "path": "photos/_search",
+    "body": {
+      "query": {
+        "term": {
+          "labels": "dog"
+        }
+      }
+    }
+  },
+  "search_by_custom_label_nyu": {
+    "method": "GET",
+    "path": "photos/_search",
+    "body": {
+      "query": {
+        "term": {
+          "labels": "nyu"
+        }
+      }
+    }
+  },
+  "group_search_custom_labels": {
+    "method": "GET",
+    "path": "photos/_search",
+    "body": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "term": {
+                "labels": "dog"
+              }
+            },
+            {
+              "term": {
+                "labels": "nyu"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
