@@ -1,0 +1,19 @@
+{
+  "Records": [
+    {
+      "eventVersion": "2.1",
+      "eventSource": "aws:s3",
+      "awsRegion": "us-east-1",
+      "eventTime": "2026-03-01T10:15:30.000Z",
+      "eventName": "ObjectCreated:Put",
+      "s3": {
+        "bucket": {
+          "name": "smart-photo-search-b2-vandana-2026"
+        },
+        "object": {
+          "key": "dog-play.jpg  "
+        }
+      }
+    }
+  ]
+}
