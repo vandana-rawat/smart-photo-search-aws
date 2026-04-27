@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.env
+.venv
+venv/
+env/
+
+# Lambda build artifacts
+*.zip
+package/
+dist/
+build/
+
+# OS/editor files
+.DS_Store
+.vscode/
+.idea/
+
+# AWS / credentials - never commit these
+.aws/
+*.pem
+*.key
+credentials
+config
+
+# Node/frontend dependencies
+node_modules/
