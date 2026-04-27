@@ -1,0 +1,38 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.12
+
+  pre_build:
+    commands:
+      - echo "Preparing deployment package for index-photos Lambda"
+      - cd lambda-functions/index-photos
+      - rm -rf package function.zip
+
+  build:
+    commands:
+      - echo "Installing dependencies if requirements.txt has packages"
+      - mkdir -p package
+      - |
+        if [ -s requirements.txt ] && grep -vE '^\s*#|^\s*$' requirements.txt > /tmp/requirements_clean.txt; then
+          pip install -r requirements.txt -t package
+        else
+          echo "No external dependencies to install"
+        fi
+      - cp lambda_function.py package/
+      - cd package
+      - zip -r ../function.zip .
+      - cd ..
+      - echo "Deployment package created"
+
+  post_build:
+    commands:
+      - echo "Updating Lambda function code"
+      - aws lambda update-function-code --function-name index-photos --zip-file fileb://function.zip
+      - echo "Lambda function index-photos updated successfully"
+
+artifacts:
+  files:
+    - lambda-functions/index-photos/function.zip
