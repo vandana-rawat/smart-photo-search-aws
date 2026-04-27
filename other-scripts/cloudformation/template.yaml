@@ -1,0 +1,455 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: >
+  NYU Cloud Computing Assignment 3 - Basic CloudFormation template.
+  Creates frontend S3 bucket, photo storage S3 bucket, two Lambda functions,
+  API Gateway with GET /search and PUT /photos/{object}, IAM roles, API key,
+  and outputs frontend website URL. OpenSearch and CodePipeline are not included
+  because they are not required for the basic CloudFormation requirement.
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: smart-photo-search
+    Description: Base project name used for resource naming.
+
+Resources:
+  # ------------------------------------------------------------
+  # S3 FRONTEND BUCKET B1
+  # ------------------------------------------------------------
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectName}-frontend-${AWS::AccountId}-${AWS::Region}"
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerPreferred
+
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: PublicReadForStaticWebsite
+            Effect: Allow
+            Principal: "*"
+            Action:
+              - s3:GetObject
+            Resource: !Sub "${FrontendBucket.Arn}/*"
+
+  # ------------------------------------------------------------
+  # S3 PHOTO STORAGE BUCKET B2
+  # ------------------------------------------------------------
+  PhotosBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectName}-photos-${AWS::AccountId}-${AWS::Region}"
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - "*"
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - HEAD
+            AllowedHeaders:
+              - "*"
+            ExposedHeaders:
+              - ETag
+            MaxAge: 3000
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # ------------------------------------------------------------
+  # LAMBDA EXECUTION ROLE
+  # ------------------------------------------------------------
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-lambda-role-${AWS::Region}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaBasicS3RekognitionPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AllowCloudWatchLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+
+              - Sid: AllowS3ReadPhotos
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:HeadObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt PhotosBucket.Arn
+                  - !Sub "${PhotosBucket.Arn}/*"
+
+              - Sid: AllowRekognitionDetectLabels
+                Effect: Allow
+                Action:
+                  - rekognition:DetectLabels
+                Resource: "*"
+
+  # ------------------------------------------------------------
+  # INDEX PHOTOS LAMBDA - LF1
+  # ------------------------------------------------------------
+  IndexPhotosLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-index-photos"
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Code:
+        ZipFile: |
+          import json
+
+          def handler(event, context):
+              print("index-photos placeholder Lambda created by CloudFormation")
+              print(json.dumps(event))
+              return {
+                  "statusCode": 200,
+                  "body": json.dumps({
+                      "message": "index-photos placeholder Lambda executed successfully"
+                  })
+              }
+
+  # ------------------------------------------------------------
+  # SEARCH PHOTOS LAMBDA - LF2
+  # ------------------------------------------------------------
+  SearchPhotosLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-search-photos"
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Code:
+        ZipFile: |
+          import json
+
+          def handler(event, context):
+              print("search-photos placeholder Lambda created by CloudFormation")
+              print(json.dumps(event))
+              return {
+                  "statusCode": 200,
+                  "headers": {
+                      "Access-Control-Allow-Origin": "*",
+                      "Access-Control-Allow-Headers": "Content-Type,x-api-key,Authorization,X-Amz-Date,X-Amz-Security-Token",
+                      "Access-Control-Allow-Methods": "GET,OPTIONS"
+                  },
+                  "body": json.dumps({
+                      "results": []
+                  })
+              }
+
+  # ------------------------------------------------------------
+  # API GATEWAY ROLE FOR S3 PUT
+  # ------------------------------------------------------------
+  ApiGatewayS3UploadRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-apigateway-s3-upload-role-${AWS::Region}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: AllowApiGatewayPutObjectToPhotosBucket
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AllowPutObjectToPhotosBucket
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:PutObjectTagging
+                Resource: !Sub "${PhotosBucket.Arn}/*"
+
+  # ------------------------------------------------------------
+  # API GATEWAY REST API
+  # ------------------------------------------------------------
+  PhotoSearchApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub "${ProjectName}-api"
+      Description: API Gateway for NYU photo search assignment.
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      BinaryMediaTypes:
+        - image/jpeg
+        - image/jpg
+        - image/png
+        - image/webp
+        - application/octet-stream
+
+  # /search
+  SearchResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref PhotoSearchApi
+      ParentId: !GetAtt PhotoSearchApi.RootResourceId
+      PathPart: search
+
+  # /photos
+  PhotosResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref PhotoSearchApi
+      ParentId: !GetAtt PhotoSearchApi.RootResourceId
+      PathPart: photos
+
+  # /photos/{object}
+  PhotoObjectResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref PhotoSearchApi
+      ParentId: !Ref PhotosResource
+      PathPart: "{object}"
+
+  # ------------------------------------------------------------
+  # GET /search
+  # ------------------------------------------------------------
+  SearchGetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PhotoSearchApi
+      ResourceId: !Ref SearchResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      ApiKeyRequired: true
+      RequestParameters:
+        method.request.querystring.q: false
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SearchLambdaArn}/invocations
+          - SearchLambdaArn: !GetAtt SearchPhotosLambda.Arn
+
+  SearchOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PhotoSearchApi
+      ResourceId: !Ref SearchResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      ApiKeyRequired: false
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        PassthroughBehavior: WHEN_NO_MATCH
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,x-api-key,Authorization,X-Amz-Date,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  SearchLambdaApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SearchPhotosLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PhotoSearchApi}/*/GET/search"
+
+  # ------------------------------------------------------------
+  # PUT /photos/{object}
+  # API Gateway S3 proxy upload
+  # ------------------------------------------------------------
+  PhotoPutMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PhotoSearchApi
+      ResourceId: !Ref PhotoObjectResource
+      HttpMethod: PUT
+      AuthorizationType: NONE
+      ApiKeyRequired: true
+      RequestParameters:
+        method.request.path.object: true
+        method.request.header.Content-Type: false
+        method.request.header.x-amz-meta-customLabels: false
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: PUT
+        Credentials: !GetAtt ApiGatewayS3UploadRole.Arn
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:s3:path/${PhotosBucket}/{object}"
+        PassthroughBehavior: WHEN_NO_MATCH
+        ContentHandling: CONVERT_TO_BINARY
+        RequestParameters:
+          integration.request.path.object: method.request.path.object
+          integration.request.header.Content-Type: method.request.header.Content-Type
+          integration.request.header.x-amz-meta-customLabels: method.request.header.x-amz-meta-customLabels
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+          - StatusCode: 400
+            SelectionPattern: "4\\d{2}"
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+          - StatusCode: 500
+            SelectionPattern: "5\\d{2}"
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+
+  PhotoObjectOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PhotoSearchApi
+      ResourceId: !Ref PhotoObjectResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      ApiKeyRequired: false
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        PassthroughBehavior: WHEN_NO_MATCH
+        ContentHandling: CONVERT_TO_TEXT
+        IntegrationResponses:
+          - StatusCode: 200
+            ContentHandling: CONVERT_TO_TEXT
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,x-amz-meta-customLabels,x-api-key,Authorization,X-Amz-Date,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'PUT,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # ------------------------------------------------------------
+  # API DEPLOYMENT, API KEY, USAGE PLAN
+  # ------------------------------------------------------------
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - SearchGetMethod
+      - SearchOptionsMethod
+      - PhotoPutMethod
+      - PhotoObjectOptionsMethod
+    Properties:
+      RestApiId: !Ref PhotoSearchApi
+      StageName: dev
+
+  PhotoSearchApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    DependsOn:
+      - ApiDeployment
+    Properties:
+      Name: !Sub "${ProjectName}-api-key"
+      Description: API key for photo search assignment API.
+      Enabled: true
+      StageKeys:
+        - RestApiId: !Ref PhotoSearchApi
+          StageName: dev
+
+  PhotoSearchUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn:
+      - ApiDeployment
+    Properties:
+      UsagePlanName: !Sub "${ProjectName}-usage-plan"
+      Description: Usage plan for photo search API.
+      ApiStages:
+        - ApiId: !Ref PhotoSearchApi
+          Stage: dev
+      Throttle:
+        RateLimit: 100
+        BurstLimit: 50
+
+  PhotoSearchUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref PhotoSearchApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref PhotoSearchUsagePlan
+
+Outputs:
+  FrontendBucketName:
+    Description: Name of the frontend S3 bucket.
+    Value: !Ref FrontendBucket
+
+  FrontendWebsiteURL:
+    Description: Public website URL for the frontend S3 bucket.
+    Value: !Sub "http://${FrontendBucket}.s3-website-${AWS::Region}.amazonaws.com"
+
+  PhotosBucketName:
+    Description: Name of the private photo storage bucket.
+    Value: !Ref PhotosBucket
+
+  IndexPhotosLambdaName:
+    Description: Name of the index-photos Lambda created by CloudFormation.
+    Value: !Ref IndexPhotosLambda
+
+  SearchPhotosLambdaName:
+    Description: Name of the search-photos Lambda created by CloudFormation.
+    Value: !Ref SearchPhotosLambda
+
+  ApiInvokeURL:
+    Description: Invoke URL for the API Gateway dev stage.
+    Value: !Sub "https://${PhotoSearchApi}.execute-api.${AWS::Region}.amazonaws.com/dev"
+
+  ApiKeyId:
+    Description: API Gateway API key ID.
+    Value: !Ref PhotoSearchApiKey
