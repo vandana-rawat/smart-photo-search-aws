@@ -26,7 +26,24 @@ OPENSEARCH_INDEX = os.environ.get("OPENSEARCH_INDEX", "photos")
 
 
 def lambda_handler(event, context):
-    query = event.get("queryStringParameters", {}).get("q", "")
+    params = event.get("queryStringParameters") or {}
+    query = params.get("q", "")
+
+    if not query:
+        multi_params = event.get("multiValueQueryStringParameters") or {}
+        values = multi_params.get("q", [])
+        if values:
+            query = values[0]
+
+    if not query:
+        query = event.get("q", "")
+
+    if not query:
+        return build_response({
+            "keywords": [],
+            "results": [],
+            "message": "Missing query parameter q",
+        })
 
     lex_response = lex.recognize_text(
         botId=BOT_ID,
@@ -41,13 +58,17 @@ def lambda_handler(event, context):
     keywords = []
 
     if slots.get("KeywordOne") and slots["KeywordOne"].get("value"):
-        keywords.append(slots["KeywordOne"]["value"]["interpretedValue"].lower())
+        keywords.append(
+            slots["KeywordOne"]["value"]["interpretedValue"].lower()
+        )
 
     if slots.get("KeywordTwo") and slots["KeywordTwo"].get("value"):
-        keywords.append(slots["KeywordTwo"]["value"]["interpretedValue"].lower())
+        keywords.append(
+            slots["KeywordTwo"]["value"]["interpretedValue"].lower()
+        )
 
     if not keywords:
-        return build_response({"results": [], "keywords": []})
+        keywords.append(query.lower())
 
     search_body = {
         "query": {
@@ -73,20 +94,37 @@ def lambda_handler(event, context):
             "Content-Type": "application/json",
             "Authorization": f"Basic {encoded_credentials}",
         },
-        method="GET",
+        method="POST",
     )
 
-    with urllib.request.urlopen(request, timeout=10) as response:
-        data = json.loads(response.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except Exception as e:
+        return build_response({
+            "keywords": keywords,
+            "results": [],
+            "error": str(e),
+        })
 
     results = []
 
-    for hit in data["hits"]["hits"]:
-        source = hit["_source"]
+    for hit in data.get("hits", {}).get("hits", []):
+        source = hit.get("_source", {})
+
+        object_key = source.get("objectKey")
+        bucket = source.get("bucket")
+        labels = source.get("labels", [])
+
+        image_url = None
+        if bucket and object_key:
+            image_url = f"https://{bucket}.s3.amazonaws.com/{object_key}"
+
         results.append({
-            "objectKey": source.get("objectKey"),
-            "bucket": source.get("bucket"),
-            "labels": source.get("labels", []),
+            "objectKey": object_key,
+            "bucket": bucket,
+            "labels": labels,
+            "url": image_url,
         })
 
     return build_response({
@@ -100,7 +138,7 @@ def build_response(body):
         "statusCode": 200,
         "headers": {
             "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-api-key,X-Amz-Security-Token",
             "Access-Control-Allow-Methods": "GET,OPTIONS",
         },
         "body": json.dumps(body),

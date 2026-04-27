@@ -1,0 +1,16 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - echo "No dependencies needed for static frontend"
+
+  build:
+    commands:
+      - echo "Deploying frontend to S3 bucket..."
+      - aws s3 sync front-end/ s3://smart-photo-search-b2-vandana-2026 --delete --exclude "buildspec.yml" --exclude "README.md"
+      - echo "Frontend deployment complete"
+
+artifacts:
+  files:
+    - front-end/**/*

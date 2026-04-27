@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Photo Search</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Smart Photo Search</h1>
+      <p>Upload photos with custom labels and search them using AI.</p>
+    </header>
+
+    <main class="grid">
+      <section class="card">
+        <h2>Search Photos</h2>
+        <input id="searchInput" type="text" placeholder="Search dogs, cars, nyu..." />
+        <button id="searchBtn">Search</button>
+        <p id="searchStatus" class="status"></p>
+      </section>
+
+      <section class="card">
+        <h2>Upload Photo</h2>
+        <input id="photoInput" type="file" accept="image/*" />
+        <input id="customLabelsInput" type="text" placeholder="Labels: nyu, cars, vandana" />
+        <button id="uploadBtn">Upload</button>
+        <p id="uploadStatus" class="status"></p>
+      </section>
+    </main>
+
+    <section class="results-section">
+      <h2>Search Results</h2>
+      <div id="results" class="results-grid"></div>
+      <p id="emptyMessage" class="empty">No photos searched yet.</p>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
