@@ -11,6 +11,9 @@ const UPLOAD_API_BASE =
 const UPLOAD_API_KEY =
   "5pqRk7HYR95PaRHVOoKBs27WlaUyz41w4zINZOct";
 
+// Image bucket, NOT frontend bucket
+const S3_BUCKET_NAME = "smart-photo-search-b2-vandana-2026";
+
 
 // -------- DOM --------
 const searchInput = document.getElementById("searchInput");
@@ -31,7 +34,7 @@ const emptyMessage = document.getElementById("emptyMessage");
 searchBtn.addEventListener("click", handleSearch);
 uploadBtn.addEventListener("click", handleUpload);
 
-searchInput.addEventListener("keydown", (event) => {
+searchInput.addEventListener("keydown", event => {
   if (event.key === "Enter") {
     handleSearch();
   }
@@ -132,7 +135,6 @@ async function uploadPhoto(file, customLabels) {
     .join(", ");
 
   console.log("Uploading to:", uploadUrl);
-  console.log("Content-Type:", file.type || "application/octet-stream");
   console.log("Custom labels:", labelsHeader);
 
   const response = await fetch(uploadUrl, {
@@ -146,6 +148,7 @@ async function uploadPhoto(file, customLabels) {
   });
 
   const text = await response.text();
+
   console.log("Upload response status:", response.status);
   console.log("Upload response body:", text);
 
@@ -179,31 +182,60 @@ function displayResults(data) {
     const card = document.createElement("div");
     card.className = "photo-card";
 
-    const imageUrl =
-      photo.url ||
-      photo.imageUrl ||
-      photo.s3Url ||
-      photo.objectUrl;
+    let key =
+      photo.objectKey ||
+      photo.object_key ||
+      photo.key ||
+      photo.filename ||
+      photo.name;
+
+    const bucket = photo.bucket || S3_BUCKET_NAME;
+
+    if (!key) {
+      console.error("Missing image key in photo:", photo);
+      return;
+    }
+
+    // If your S3 images are directly inside bucket root, keep this as-is.
+    // If your actual S3 key is photos/filename.jpg, uncomment the block below.
+    /*
+    if (!key.startsWith("photos/")) {
+      key = `photos/${key}`;
+    }
+    */
+
+    const encodedKey = key
+      .split("/")
+      .map(encodeURIComponent)
+      .join("/");
+
+    const imageUrl = `https://${bucket}.s3.amazonaws.com/${encodedKey}`;
+
+    console.log("Photo object:", photo);
+    console.log("IMAGE URL:", imageUrl);
 
     const labels =
       photo.labels ||
       photo.Labels ||
       photo.customLabels ||
+      photo.custom_labels ||
       [];
 
     const img = document.createElement("img");
-    img.src = imageUrl || "";
-    img.alt = photo.objectKey || photo.key || "Search result";
+    img.src = imageUrl;
+    img.alt = key;
 
     img.onerror = function () {
-      this.src = "https://dummyimage.com/300x200/cccccc/000000&text=Image+Not+Available";
+      console.error("Image failed to load:", imageUrl);
+      this.src =
+        "https://dummyimage.com/300x200/cccccc/000000&text=Image+Not+Found";
     };
 
     const info = document.createElement("div");
     info.className = "photo-info";
 
     info.innerHTML = `
-      <strong>${photo.objectKey || photo.key || "Photo"}</strong>
+      <strong>${key}</strong>
       <span>Labels: ${Array.isArray(labels) ? labels.join(", ") : labels}</span>
     `;
 
@@ -214,11 +246,13 @@ function displayResults(data) {
 }
 
 
+// -------- NORMALIZE RESPONSE --------
 function normalizePhotoResponse(data) {
   if (Array.isArray(data)) return data;
 
   if (Array.isArray(data.results)) return data.results;
   if (Array.isArray(data.photos)) return data.photos;
+  if (Array.isArray(data.hits)) return data.hits;
 
   if (data.body) {
     try {
@@ -228,6 +262,7 @@ function normalizePhotoResponse(data) {
       if (Array.isArray(body)) return body;
       if (Array.isArray(body.results)) return body.results;
       if (Array.isArray(body.photos)) return body.photos;
+      if (Array.isArray(body.hits)) return body.hits;
     } catch (error) {
       console.error("Could not parse response body:", error);
     }
