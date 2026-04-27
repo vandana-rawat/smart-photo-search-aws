@@ -8,9 +8,5 @@ phases:
   build:
     commands:
       - echo "Deploying frontend to S3 bucket..."
-      - aws s3 sync front-end/ s3://smart-photo-search-b2-vandana-2026 --delete --exclude "buildspec.yml" --exclude "README.md"
+      - aws s3 sync front-end/ s3://smart-photo-frontend-gurjeet-2026 --delete --exclude "buildspec.yml" --exclude "README.md"
       - echo "Frontend deployment complete"
-
-artifacts:
-  files:
-    - front-end/**/*
