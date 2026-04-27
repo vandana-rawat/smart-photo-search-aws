@@ -4,6 +4,7 @@ const SEARCH_API_KEY = window.CONFIG.SEARCH_API_KEY;
 const UPLOAD_API_BASE = window.CONFIG.UPLOAD_API_BASE;
 const UPLOAD_API_KEY = window.CONFIG.UPLOAD_API_KEY;
 
+
 // -------- DOM --------
 const searchInput = document.getElementById("searchInput");
 const photoInput = document.getElementById("photoInput");
@@ -206,6 +207,7 @@ function displayResults(data) {
 }
 
 
+// -------- NORMALIZE RESPONSE --------
 function normalizePhotoResponse(data) {
   if (Array.isArray(data)) return data;
 
