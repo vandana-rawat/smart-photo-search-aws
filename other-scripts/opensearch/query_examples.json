@@ -1,0 +1,65 @@
+{
+  "independent_label_search": {
+    "description": "Returns photos that contain one searched label, for example dog.",
+    "query": {
+      "query": {
+        "term": {
+          "labels": "dog"
+        }
+      }
+    }
+  },
+  "custom_label_search": {
+    "description": "Returns photos that contain a custom uploaded label, for example testlabel.",
+    "query": {
+      "query": {
+        "term": {
+          "labels": "testlabel"
+        }
+      }
+    }
+  },
+  "group_label_search_and": {
+    "description": "Returns photos that contain all searched labels, for example dog and park.",
+    "query": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "term": {
+                "labels": "dog"
+              }
+            },
+            {
+              "term": {
+                "labels": "park"
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "group_label_search_or": {
+    "description": "Returns photos that contain at least one searched label, for example dog or park.",
+    "query": {
+      "query": {
+        "bool": {
+          "should": [
+            {
+              "term": {
+                "labels": "dog"
+              }
+            },
+            {
+              "term": {
+                "labels": "park"
+              }
+            }
+          ],
+          "minimum_should_match": 1
+        }
+      }
+    }
+  }
+}
