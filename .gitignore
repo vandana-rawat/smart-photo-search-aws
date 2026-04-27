@@ -28,3 +28,10 @@ config
 
 # Node/frontend dependencies
 node_modules/
+__pycache__/
+*.pyc
+.env
+node_modules/
+.DS_Store
+*.zip
+.venv/
