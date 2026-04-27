@@ -1,9 +1,11 @@
 // -------- CONFIG --------
-const SEARCH_API = window.CONFIG.SEARCH_API;
-const SEARCH_API_KEY = window.CONFIG.SEARCH_API_KEY;
-const UPLOAD_API_BASE = window.CONFIG.UPLOAD_API_BASE;
-const UPLOAD_API_KEY = window.CONFIG.UPLOAD_API_KEY;
+const SEARCH_API = "https://5r274evtng.execute-api.us-east-1.amazonaws.com/prod/search";
 
+const SEARCH_API_KEY = "kZkV3Nb1G95bABvyFRGfd7hK4YlGeNEr9mFJVOhY";
+
+const UPLOAD_API_BASE = "https://aczjc9yqfh.execute-api.us-east-1.amazonaws.com/dev";
+
+const UPLOAD_API_KEY = "5pqRk7HYR95PaRHVOoKBs27WlaUyz41w4zINZOct";
 
 // -------- DOM --------
 const searchInput = document.getElementById("searchInput");

@@ -11,19 +11,13 @@ phases:
 
   post_build:
     commands:
-      - echo "Injecting environment variables into config.js..."
-      - sed -i "s|__SEARCH_API__|$SEARCH_API|g" config.js
-      - sed -i "s|__SEARCH_API_KEY__|$SEARCH_API_KEY|g" config.js
-      - sed -i "s|__UPLOAD_API_BASE__|$UPLOAD_API_BASE|g" config.js
-      - sed -i "s|__UPLOAD_API_KEY__|$UPLOAD_API_KEY|g" config.js
-      - echo "Deploying only frontend files to B1..."
-      - aws s3 sync . s3://smart-photo-frontend-gurjeet --delete --exclude "README.md" --exclude "buildspec.yml"
+      - echo "Deploying frontend files..."
+      - aws s3 sync front-end/ s3://smart-photo-frontend-gurjeet --delete --exclude "README.md" --exclude "buildspec.yml"
       - echo "Frontend deployment complete"
 
 artifacts:
   files:
-    - index.html
-    - app.js
-    - style.css
-    - config.js
-    - sdk-search/**/*
+    - front-end/index.html
+    - front-end/app.js
+    - front-end/style.css
+    - front-end/sdk-search/**/*
