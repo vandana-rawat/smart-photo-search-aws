@@ -3,20 +3,21 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      - echo "Starting frontend deployment..."
-      - echo "Deploying from current front-end folder"
+      - echo "Starting frontend deployment"
+
   build:
     commands:
-      - echo "No build needed for static HTML/CSS/JS"
+      - echo "No build needed for static frontend"
+
   post_build:
     commands:
-      - echo "Syncing frontend files to B1 frontend bucket..."
-      - aws s3 sync . s3://smart-photo-frontend-gurjeet --delete --exclude ".git/*" --exclude "README.md" --exclude "buildspec.yml"
-      - echo "Frontend deployed successfully"
+      - echo "Deploying only frontend files to B1"
+      - cd front-end && aws s3 sync . s3://smart-photo-frontend-gurjeet --delete --exclude "README.md" --exclude "buildspec.yml"
+      - echo "Frontend deployment complete"
 
 artifacts:
   files:
-    - index.html
-    - app.js
-    - style.css
-    - sdk-search/**/*
+    - front-end/index.html
+    - front-end/app.js
+    - front-end/style.css
+    - front-end/sdk-search/**/*
